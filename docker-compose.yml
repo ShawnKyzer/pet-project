@@ -236,5 +236,130 @@ services:
       - SPARK_RPC_ENCRYPTION_ENABLED=no
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
+  atlas:
+    image: sburn/apache-atlas
+    ports:
+      - '21000:21000'
+    command: [ "/opt/apache-atlas-2.1.0/bin/atlas_start.py"]
+  neo4j:
+    image: neo4j:3.5.26
+    container_name: neo4j_amundsen
+    environment:
+      - NEO4J_AUTH=neo4j/test
+    ulimits:
+      nofile:
+        soft: 40000
+        hard: 40000
+    ports:
+      - 7474:7474
+      - 7687:7687
+    volumes:
+      - ./conf/neo4j:/var/lib/neo4j/conf
+      - ./.local/neo4j/data:/data
+  elasticsearch:
+    image: elasticsearch:6.7.0
+    container_name: es_amundsen
+    ports:
+      - 9200:9200
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+  amundsensearch:
+    build:
+      context: .
+      dockerfile: Dockerfile.search.public
+    container_name: amundsensearch
+    ports:
+      - 5001:5001
+    depends_on:
+      - elasticsearch
+    environment:
+      - PROXY_ENDPOINT=es_amundsen
+  amundsenmetadata:
+    build:
+      context: .
+      dockerfile: Dockerfile.metadata.public
+    container_name: amundsenmetadata
+    depends_on:
+      - neo4j
+    ports:
+      - 5002:5002
+    environment:
+      - PROXY_HOST=bolt://neo4j_amundsen
+  amundsenfrontend:
+    build:
+      args:
+        SEARCHSERVICE_BASE: http://amundsensearch:5001
+        METADATASERVICE_BASE: http://amundsenmetadata:5002
+      context: .
+      dockerfile: Dockerfile.frontend.local
+    container_name: amundsenfrontend
+    depends_on:
+      - amundsenmetadata
+      - amundsensearch
+    ports:
+      - 5000:5000
+    environment:
+      - SEARCHSERVICE_BASE=http://amundsensearch:5001
+      - METADATASERVICE_BASE=http://amundsenmetadata:5002
+      - FRONTEND_SVC_CONFIG_MODULE_CLASS=amundsen_application.config.TestConfig
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: monitoring_prometheus
+    restart: unless-stopped
+    volumes:
+      - ./data/prometheus/config:/etc/prometheus/
+      - ./data/prometheus/data:/prometheus
+    command:
+      - '-config.file=/etc/prometheus/prometheus.yml'
+      - '-storage.local.path=/prometheus'
+      - '-alertmanager.url=http://alertmanager:9093'
+    expose:
+      - 9090
+    ports:
+      - 9091:9090
+    links:
+      - cadvisor:cadvisor
+      - node-exporter:node-exporter
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: monitoring_node_exporter
+    restart: unless-stopped
+    expose:
+      - 9100
+
+  cadvisor:
+    image: google/cadvisor:latest
+    container_name: monitoring_cadvisor
+    restart: unless-stopped
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    expose:
+      - 8080
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: monitoring_grafana
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    links:
+      - prometheus:prometheus
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=MYPASSWORT
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_DOMAIN=myrul.com
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=smtp.gmail.com:587
+      - GF_SMTP_USER=myadrress@gmail.com
+      - GF_SMTP_PASSWORD=mypassword
+      - GF_SMTP_FROM_ADDRESS=myaddress@gmail.com
 volumes:
   postgres-db-volume:
