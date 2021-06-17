@@ -312,13 +312,11 @@ services:
       - ./data/prometheus/config:/etc/prometheus/
       - ./data/prometheus/data:/prometheus
     command:
-      - '-config.file=/etc/prometheus/prometheus.yml'
-      - '-storage.local.path=/prometheus'
-      - '-alertmanager.url=http://alertmanager:9093'
+      - '--config.file=/etc/prometheus/prometheus.yml'
     expose:
       - 9090
     ports:
-      - 9091:9090
+      - 9090:9090
     links:
       - cadvisor:cadvisor
       - node-exporter:node-exporter
@@ -354,7 +352,7 @@ services:
       - ./data/grafana:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=MYPASSWORT
-      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_USERS_ALLOW_SIGN_UP=true
       - GF_SERVER_DOMAIN=myrul.com
       - GF_SMTP_ENABLED=true
       - GF_SMTP_HOST=smtp.gmail.com:587
