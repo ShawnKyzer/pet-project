@@ -19,12 +19,12 @@ with DAG(
 
     pet_event_ingestion = SparkSubmitOperator(task_id='pet_event_ingestion',
                                               conn_id='spark_local',
-                                              application="${SPARK_HOME}/spark/pet_event_ingestor.py",
-                                              total_executor_cores=4,
-                                              packages="io.delta:delta-core_2.12:0.7.0,org.apache.spark:spark-sql-kafka-0-10_2.12:3.0.0",
-                                              executor_cores=2,
-                                              executor_memory='5g',
-                                              driver_memory='5g',
+                                              application="/home/airflow/.local/lib/python3.6/site-packages/pyspark/examples/src/main/python/pi.py",
+                                              total_executor_cores=1,
+                                              # packages="io.delta:delta-core_2.12:0.7.0,org.apache.spark:spark-sql-kafka-0-10_2.12:3.0.0",
+                                              executor_cores=1,
+                                              executor_memory='1g',
+                                              driver_memory='1g',
                                               name='pet_event_ingestion',
                                               execution_timeout=timedelta(minutes=10),
                                               )
