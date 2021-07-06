@@ -3,3 +3,11 @@ The year is 2050 and we finally have the technology to read the minds of our pet
 
 ![alt text](images/pet_activity_enjoyment_data_product.png)
 
+# Requirements and Run
+You will need to install Docker and Docker-Compose in order to run this project.
+In addition, Docker will require at least 6 CPU, 10 GB of Memory and 2 GB of Swap.
+
+docker-compose up
+
+# DataHub
+If you would like to check out the Datahub integration there is a branch datahub_addition that you can leverage in place of the Amundsen/Atlas combination on the main for Data Lineage and Data Catalog.
