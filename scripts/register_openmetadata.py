@@ -20,9 +20,11 @@ HEADERS = {"Content-Type": "application/json"}
 
 def get_auth_token():
     """Get JWT token for API calls."""
+    import base64
+    password_b64 = base64.b64encode("admin".encode("utf-8")).decode("utf-8")
     response = requests.post(
         f"{OM_API_URL}/users/login",
-        json={"email": "admin@open-metadata.org", "password": "admin"},
+        json={"email": "admin@open-metadata.org", "password": password_b64},
         headers={"Content-Type": "application/json"},
         timeout=10
     )
@@ -153,7 +155,7 @@ def create_data_product():
     response = requests.post(
         f"{OM_API_URL}/domains",
         json=domain_payload,
-        auth=OM_AUTH,
+        headers=HEADERS,
         timeout=30
     )
 
@@ -163,7 +165,7 @@ def create_data_product():
     # Get domain
     domain_response = requests.get(
         f"{OM_API_URL}/domains/name/pet-analytics",
-        auth=OM_AUTH,
+        headers=HEADERS,
         timeout=10
     )
 
@@ -200,21 +202,56 @@ This data product provides aggregated metrics about pet activities and their enj
 - Identify popular activities by species
 - Track regional pet activity trends
 """,
-        "domain": {
-            "id": domain["id"],
-            "type": "domain"
-        }
+        "domain": domain["fullyQualifiedName"]
     }
 
+    # Check if exists and delete to ensure clean creation with correct FQN
+    print("   Checking for existing data product...")
+    check_response = requests.get(
+        f"{OM_API_URL}/dataProducts/name/pet-activity-enjoyment",
+        headers=HEADERS
+    )
+    if check_response.status_code == 200:
+        dp_id = check_response.json()['id']
+        print(f"   Deleting existing data product {dp_id} to fix FQN...")
+        requests.delete(
+            f"{OM_API_URL}/dataProducts/{dp_id}",
+            headers=HEADERS,
+            params={"hardDelete": "true"}
+        )
+        time.sleep(2) # Wait for deletion
+
+    # Create data product
+    print("   Creating Data Product...")
     response = requests.post(
         f"{OM_API_URL}/dataProducts",
         json=data_product_payload,
-        auth=OM_AUTH,
+        headers=HEADERS,
         timeout=30
     )
 
     if response.status_code == 201:
         print("Created Data Product: pet-activity-enjoyment")
+        dp_id = response.json().get("id")
+        
+        # Link to domain via PATCH (reliable method)
+        print("   Linking to domain...")
+        patch_payload = [{
+            "op": "add",
+            "path": "/domain",
+            "value": {
+                "id": domain["id"],
+                "type": "domain",
+                "name": domain["name"],
+                "description": domain["description"]
+            }
+        }]
+        requests.patch(
+            f"{OM_API_URL}/dataProducts/{dp_id}",
+            json=patch_payload,
+            headers={"Content-Type": "application/json-patch+json", **HEADERS},
+            timeout=10
+        )
         return response.json()
     elif response.status_code == 409:
         print("Data Product already exists")
@@ -227,6 +264,10 @@ def main():
     print("=" * 60)
     print("Registering Pet Activity Data in OpenMetadata")
     print("=" * 60)
+
+    # Authenticate
+    if not get_auth_token():
+        return
 
     # Step 1: Create database service
     print("\n1. Creating database service...")
@@ -241,6 +282,10 @@ def main():
     # Step 2: Create ingestion pipeline
     print("\n2. Creating ingestion pipeline...")
     pipeline = create_ingestion_pipeline(service_id)
+    if pipeline:
+        pipeline_id = pipeline.get("id")
+        print(f"   Pipeline ID: {pipeline_id}")
+        trigger_ingestion(pipeline_id)
 
     # Step 3: Create domain and data product
     print("\n3. Creating data product...")
@@ -250,7 +295,9 @@ def main():
     print("Registration complete!")
     print("=" * 60)
     print("\nAccess OpenMetadata at: http://localhost:8585")
-    print("Login with: admin / admin")
+    print("Login with:")
+    print("  Email:    admin@open-metadata.org")
+    print("  Password: admin")
     print("\nYou can find:")
     print("  - Database Service: Services > Databases > pet-activity-postgres")
     print("  - Data Product: Data Products > pet-activity-enjoyment")
