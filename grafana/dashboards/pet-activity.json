@@ -12,7 +12,7 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "${datasource}"
+        "uid": "pet-activity-db"
       },
       "fieldConfig": {
         "defaults": {
@@ -23,21 +23,37 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {"color": "red", "value": null},
-              {"color": "yellow", "value": 60},
-              {"color": "green", "value": 80}
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
             ]
           },
           "unit": "none"
         },
         "overrides": []
       },
-      "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
       "id": 1,
       "options": {
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -47,7 +63,10 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "datasource": {"type": "postgres", "uid": "${datasource}"},
+          "datasource": {
+            "type": "postgres",
+            "uid": "pet-activity-db"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -59,29 +78,51 @@
       "type": "gauge"
     },
     {
-      "datasource": {"type": "postgres", "uid": "${datasource}"},
+      "datasource": {
+        "type": "postgres",
+        "uid": "pet-activity-db"
+      },
       "fieldConfig": {
         "defaults": {
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{"color": "blue", "value": null}]
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
           }
         }
       },
-      "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
       "id": 2,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       },
       "targets": [
         {
-          "datasource": {"type": "postgres", "uid": "${datasource}"},
+          "datasource": {
+            "type": "postgres",
+            "uid": "pet-activity-db"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -93,29 +134,51 @@
       "type": "stat"
     },
     {
-      "datasource": {"type": "postgres", "uid": "${datasource}"},
+      "datasource": {
+        "type": "postgres",
+        "uid": "pet-activity-db"
+      },
       "fieldConfig": {
         "defaults": {
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{"color": "green", "value": null}]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
         }
       },
-      "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0},
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
       "id": 3,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       },
       "targets": [
         {
-          "datasource": {"type": "postgres", "uid": "${datasource}"},
+          "datasource": {
+            "type": "postgres",
+            "uid": "pet-activity-db"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -127,29 +190,51 @@
       "type": "stat"
     },
     {
-      "datasource": {"type": "postgres", "uid": "${datasource}"},
+      "datasource": {
+        "type": "postgres",
+        "uid": "pet-activity-db"
+      },
       "fieldConfig": {
         "defaults": {
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{"color": "purple", "value": null}]
+            "steps": [
+              {
+                "color": "purple",
+                "value": null
+              }
+            ]
           }
         }
       },
-      "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0},
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
       "id": 4,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "auto"
       },
       "targets": [
         {
-          "datasource": {"type": "postgres", "uid": "${datasource}"},
+          "datasource": {
+            "type": "postgres",
+            "uid": "pet-activity-db"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -161,10 +246,15 @@
       "type": "stat"
     },
     {
-      "datasource": {"type": "postgres", "uid": "${datasource}"},
+      "datasource": {
+        "type": "postgres",
+        "uid": "pet-activity-db"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "axisCenteredZero": false,
             "axisColorMode": "text",
@@ -174,32 +264,66 @@
             "drawStyle": "bars",
             "fillOpacity": 80,
             "gradientMode": "none",
-            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
-            "scaleDistribution": {"type": "linear"},
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "auto",
             "spanNulls": false,
-            "stacking": {"group": "A", "mode": "none"},
-            "thresholdsStyle": {"mode": "off"}
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{"color": "green", "value": null}]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
         }
       },
-      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 8},
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
       "id": 5,
       "options": {
-        "legend": {"calcs": ["mean"], "displayMode": "table", "placement": "right", "showLegend": true},
-        "tooltip": {"mode": "single", "sort": "none"}
+        "legend": {
+          "calcs": [
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "targets": [
         {
-          "datasource": {"type": "postgres", "uid": "${datasource}"},
+          "datasource": {
+            "type": "postgres",
+            "uid": "pet-activity-db"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -211,25 +335,57 @@
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "postgres", "uid": "${datasource}"},
+      "datasource": {
+        "type": "postgres",
+        "uid": "pet-activity-db"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
-          "custom": {"hideFrom": {"legend": false, "tooltip": false, "viz": false}},
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
           "mappings": []
         }
       },
-      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 8},
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
       "id": 6,
       "options": {
-        "legend": {"displayMode": "list", "placement": "right", "showLegend": true},
+        "legend": {
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
         "pieType": "pie",
-        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": true},
-        "tooltip": {"mode": "single", "sort": "none"}
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "targets": [
         {
-          "datasource": {"type": "postgres", "uid": "${datasource}"},
+          "datasource": {
+            "type": "postgres",
+            "uid": "pet-activity-db"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -241,44 +397,84 @@
       "type": "piechart"
     },
     {
-      "datasource": {"type": "postgres", "uid": "${datasource}"},
+      "datasource": {
+        "type": "postgres",
+        "uid": "pet-activity-db"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "thresholds"},
+          "color": {
+            "mode": "thresholds"
+          },
           "custom": {
             "align": "auto",
-            "cellOptions": {"type": "auto"},
+            "cellOptions": {
+              "type": "auto"
+            },
             "inspect": false
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {"color": "red", "value": null},
-              {"color": "yellow", "value": 70},
-              {"color": "green", "value": 85}
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "green",
+                "value": 85
+              }
             ]
           }
         },
         "overrides": [
           {
-            "matcher": {"id": "byName", "options": "avg_enjoyment_score"},
+            "matcher": {
+              "id": "byName",
+              "options": "avg_enjoyment_score"
+            },
             "properties": [
-              {"id": "custom.cellOptions", "value": {"mode": "gradient", "type": "gauge"}}
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "gauge"
+                }
+              }
             ]
           }
         ]
       },
-      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 18},
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
       "id": 7,
       "options": {
         "cellHeight": "sm",
-        "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false},
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "showHeader": true
       },
       "targets": [
         {
-          "datasource": {"type": "postgres", "uid": "${datasource}"},
+          "datasource": {
+            "type": "postgres",
+            "uid": "pet-activity-db"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -290,10 +486,15 @@
       "type": "table"
     },
     {
-      "datasource": {"type": "postgres", "uid": "${datasource}"},
+      "datasource": {
+        "type": "postgres",
+        "uid": "pet-activity-db"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "continuous-GrYlRd"},
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
           "custom": {
             "axisCenteredZero": false,
             "axisColorMode": "text",
@@ -303,30 +504,65 @@
             "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "scheme",
-            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
             "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
-            "scaleDistribution": {"type": "linear"},
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "auto",
             "spanNulls": false,
-            "stacking": {"group": "A", "mode": "none"},
-            "thresholdsStyle": {"mode": "off"}
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
           "unit": "none"
         }
       },
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 28},
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
       "id": 8,
       "options": {
-        "legend": {"calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true},
-        "tooltip": {"mode": "single", "sort": "none"}
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "targets": [
         {
-          "datasource": {"type": "postgres", "uid": "${datasource}"},
+          "datasource": {
+            "type": "postgres",
+            "uid": "pet-activity-db"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -341,11 +577,19 @@
   "refresh": "30s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["pets", "activity", "enjoyment"],
+  "tags": [
+    "pets",
+    "activity",
+    "enjoyment"
+  ],
   "templating": {
     "list": [
       {
-        "current": {"selected": false, "text": "Pet Activity DB", "value": "Pet Activity DB"},
+        "current": {
+          "selected": false,
+          "text": "Pet Activity DB",
+          "value": "pet-activity-db"
+        },
         "hide": 0,
         "includeAll": false,
         "label": "Data Source",
@@ -360,7 +604,10 @@
       }
     ]
   },
-  "time": {"from": "now-24h", "to": "now"},
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "",
   "title": "Pet Activity Enjoyment Dashboard",

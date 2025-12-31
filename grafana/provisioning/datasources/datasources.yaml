@@ -10,6 +10,7 @@ datasources:
 
   - name: Pet Activity DB
     type: postgres
+    uid: pet-activity-db
     url: output-postgres:5432
     database: outputdb
     user: outputdb
