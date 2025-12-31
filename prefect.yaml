@@ -1,0 +1,26 @@
+name: pet-project
+prefect-version: 3.0.0
+
+# Build instructions
+build: null
+
+# Push instructions
+push: null
+
+# Pull instructions
+pull:
+- prefect.deployments.steps.set_working_directory:
+    directory: /app
+
+deployments:
+- name: pet-activity-enjoyment
+  version: null
+  tags: []
+  description: null
+  entrypoint: flows/pet_activity_enjoyment.py:pet_activity_enjoyment_flow
+  parameters: {}
+  work_pool:
+    name: local-pool
+    work_queue_name: null
+    job_variables: {}
+  schedules: []

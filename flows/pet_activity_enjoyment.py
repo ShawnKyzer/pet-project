@@ -20,12 +20,14 @@ import psycopg2
 from prefect import flow, task, get_run_logger
 from prefect.tasks import task_input_hash
 
+import os
+
 # Configuration
-KAFKA_BOOTSTRAP = "localhost:9092"
-KAFKA_TOPIC = "pet-sensor-events"
-PET_DB_CONN = "postgresql://petdb:petdb@localhost:5433/petdb"
-OUTPUT_DB_CONN = "postgresql://outputdb:outputdb@localhost:5434/outputdb"
-DELTA_PATH = "/tmp/delta/pet_events"
+KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP", "localhost:9092")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "pet-sensor-events")
+PET_DB_CONN = os.getenv("PET_DB_CONN", "postgresql://petdb:petdb@localhost:5433/petdb")
+OUTPUT_DB_CONN = os.getenv("OUTPUT_DB_CONN", "postgresql://outputdb:outputdb@localhost:5434/outputdb")
+DELTA_PATH = os.getenv("DELTA_PATH", "/tmp/delta/pet_events")
 
 
 @task(name="create-kafka-topic", retries=2)

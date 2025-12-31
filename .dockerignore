@@ -41,6 +41,7 @@ data/
 
 # Documentation
 *.md
+!README.md
 docs/
 
 # CI/CD

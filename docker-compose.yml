@@ -113,13 +113,19 @@ services:
     restart: always
 
   prefect-worker:
-    image: prefecthq/prefect:3-python3.12
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
     container_name: prefect_worker
     command: prefect worker start --pool local-pool
     environment:
       PREFECT_API_URL: http://prefect-server:4200/api
+      KAFKA_BOOTSTRAP: broker:29092
+      PET_DB_CONN: postgresql://petdb:petdb@pet-postgres:5432/petdb
+      OUTPUT_DB_CONN: postgresql://outputdb:outputdb@output-postgres:5432/outputdb
     volumes:
       - ./flows:/app/flows
+      - ./scripts:/app/scripts
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       prefect-server:
