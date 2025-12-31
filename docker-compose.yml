@@ -1,170 +1,265 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
+# Modern Pet Project Stack
+# - Prefect 3 for workflow orchestration (replaces Airflow)
+# - OpenMetadata for data catalog and lineage (replaces Amundsen + Atlas)
+# - Kafka for streaming
+# - Spark for data processing
+# - Prometheus/Grafana for monitoring
 #
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-
-# Basic Airflow cluster configuration for CeleryExecutor with Redis and PostgreSQL.
-#
-# WARNING: This configuration is for local development. Do not use it in a production deployment.
-#
-# This configuration supports basic configuration using environment variables or an .env file
-# The following variables are supported:
-#
-# AIRFLOW_IMAGE_NAME         - Docker image name used to run Airflow.
-#                              Default: apache/airflow:master-python3.8
-# AIRFLOW_UID                - User ID in Airflow containers
-#                              Default: 50000
-# AIRFLOW_GID                - Group ID in Airflow containers
-#                              Default: 50000
-# _AIRFLOW_WWW_USER_USERNAME - Username for the administrator account.
-#                              Default: airflow
-# _AIRFLOW_WWW_USER_PASSWORD - Password for the administrator account.
-#                              Default: airflow
-#
-# Feel free to modify this file to suit your needs.
+# Requirements: Docker with at least 6 CPU, 12 GB Memory, 2 GB Swap
 ---
-version: '3'
-x-airflow-common:
-  &airflow-common
-#  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.1.0}
-  build: ./airflow
-  environment:
-    &airflow-common-env
-    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
-    AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
-    AIRFLOW__CORE__FERNET_KEY: ''
-    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
-    AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
-  volumes:
-    - ./airflow/dags:/opt/airflow/dags
-    - ./airflow/logs:/opt/airflow/logs
-    - ./airflow/plugins:/opt/airflow/plugins
-  user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
-  depends_on:
-    redis:
-      condition: service_healthy
-    postgres:
-      condition: service_healthy
-
 services:
-  postgres:
-    image: postgres:13
+  # =============================================================================
+  # DATA SOURCES (Pet Registration Database)
+  # =============================================================================
+  pet-postgres:
+    image: postgres:16
+    container_name: pet_postgres
     environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
+      POSTGRES_USER: petdb
+      POSTGRES_PASSWORD: petdb
+      POSTGRES_DB: petdb
     volumes:
-      - postgres-db-volume:/var/lib/postgresql/data
+      - pet-postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-pet-db.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5433:5432"
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "airflow"]
+      test: ["CMD-SHELL", "pg_isready -U petdb"]
       interval: 5s
+      timeout: 5s
       retries: 5
     restart: always
 
-  redis:
-    image: redis:latest
+  # =============================================================================
+  # DATA OUTPUT (Aggregated Results for Grafana)
+  # =============================================================================
+  output-postgres:
+    image: postgres:16
+    container_name: output_postgres
+    environment:
+      POSTGRES_USER: outputdb
+      POSTGRES_PASSWORD: outputdb
+      POSTGRES_DB: outputdb
+    volumes:
+      - output-postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-output-db.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - 6379:6379
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U outputdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  # =============================================================================
+  # PREFECT STACK (Workflow Orchestration)
+  # =============================================================================
+  prefect-postgres:
+    image: postgres:16
+    container_name: prefect_postgres
+    environment:
+      POSTGRES_USER: prefect
+      POSTGRES_PASSWORD: prefect
+      POSTGRES_DB: prefect
+    volumes:
+      - prefect-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prefect"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  prefect-redis:
+    image: redis:7-alpine
+    container_name: prefect_redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - prefect-redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
-      timeout: 30s
-      retries: 50
+      timeout: 5s
+      retries: 5
     restart: always
 
-  airflow-webserver:
-    <<: *airflow-common
-    command: webserver
+  prefect-server:
+    image: prefecthq/prefect:3-python3.12
+    container_name: prefect_server
+    command: prefect server start --host 0.0.0.0
     ports:
-      - 8080:8080
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-    restart: always
-
-  airflow-scheduler:
-    <<: *airflow-common
-    command: scheduler
-    healthcheck:
-      test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
-      interval: 10s
-      timeout: 10s
-      retries: 5
-    restart: always
-
-  airflow-worker:
-    <<: *airflow-common
-    command: celery worker
-    healthcheck:
-      test:
-        - "CMD-SHELL"
-        - 'celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
-      interval: 10s
-      timeout: 10s
-      retries: 5
-    restart: always
-
-  airflow-init:
-    <<: *airflow-common
-    command: version
+      - "4200:4200"
     environment:
-      <<: *airflow-common-env
-      _AIRFLOW_DB_UPGRADE: 'true'
-      _AIRFLOW_WWW_USER_CREATE: 'true'
-      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
-      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
-
-  flower:
-    <<: *airflow-common
-    command: celery flower
-    ports:
-      - 5555:5555
+      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://prefect:prefect@prefect-postgres:5432/prefect
+      PREFECT_MESSAGING_BROKER: prefect_redis.messaging
+      PREFECT_MESSAGING_CACHE: prefect_redis.messaging
+      PREFECT_REDIS_MESSAGING_HOST: prefect-redis
+      PREFECT_REDIS_MESSAGING_PORT: 6379
+      PREFECT_SERVER_API_HOST: 0.0.0.0
+      PREFECT_SERVER_API_PORT: 4200
+    depends_on:
+      prefect-postgres:
+        condition: service_healthy
+      prefect-redis:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:5555/"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:4200/api/health')\""]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: always
+
+  prefect-worker:
+    image: prefecthq/prefect:3-python3.12
+    container_name: prefect_worker
+    command: prefect worker start --pool local-pool
+    environment:
+      PREFECT_API_URL: http://prefect-server:4200/api
+    volumes:
+      - ./flows:/app/flows
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      prefect-server:
+        condition: service_healthy
+    restart: always
+
+  # =============================================================================
+  # OPENMETADATA STACK (Data Catalog & Lineage)
+  # =============================================================================
+  openmetadata-migrate:
+    image: docker.getcollate.io/openmetadata/server:1.6.0
+    container_name: openmetadata_migrate
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["/opt/openmetadata/bootstrap/openmetadata-ops.sh migrate"]
+    environment:
+      DB_DRIVER_CLASS: com.mysql.cj.jdbc.Driver
+      DB_SCHEME: mysql
+      DB_HOST: openmetadata-mysql
+      DB_PORT: 3306
+      DB_USER: openmetadata
+      DB_USER_PASSWORD: openmetadata
+      OM_DATABASE: openmetadata
+    depends_on:
+      openmetadata-mysql:
+        condition: service_healthy
+    restart: "no"
+
+  openmetadata-mysql:
+    image: mysql:8.0
+    container_name: openmetadata_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: openmetadata
+      MYSQL_USER: openmetadata
+      MYSQL_PASSWORD: openmetadata
+      MYSQL_DATABASE: openmetadata
+    volumes:
+      - openmetadata-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-popenmetadata"]
       interval: 10s
       timeout: 10s
       retries: 5
     restart: always
 
+  openmetadata-elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.4
+    container_name: openmetadata_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - openmetadata-es-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    restart: always
+
+  openmetadata-server:
+    image: docker.getcollate.io/openmetadata/server:1.6.0
+    container_name: openmetadata_server
+    environment:
+      # Database Configuration
+      DB_DRIVER_CLASS: com.mysql.cj.jdbc.Driver
+      DB_SCHEME: mysql
+      DB_HOST: openmetadata-mysql
+      DB_PORT: 3306
+      DB_USER: openmetadata
+      DB_USER_PASSWORD: openmetadata
+      OM_DATABASE: openmetadata
+      # Elasticsearch Configuration
+      ELASTICSEARCH_HOST: openmetadata-elasticsearch
+      ELASTICSEARCH_PORT: 9200
+      ELASTICSEARCH_SCHEME: http
+      # Server Configuration
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8585
+      SERVER_ADMIN_PORT: 8586
+      # Authentication - Basic auth (admin/admin)
+      AUTHENTICATION_PROVIDER: basic
+      AUTHENTICATION_PUBLIC_KEYS: "[http://localhost:8585/api/v1/system/config/jwks]"
+      AUTHENTICATION_AUTHORITY: "https://accounts.google.com"
+      AUTHENTICATION_CLIENT_ID: ""
+      AUTHENTICATION_CALLBACK_URL: ""
+      AUTHORIZER_CLASS_NAME: org.openmetadata.service.security.DefaultAuthorizer
+      AUTHORIZER_REQUEST_FILTER: org.openmetadata.service.security.JwtFilter
+      AUTHORIZER_ADMIN_PRINCIPALS: "[admin]"
+      AUTHORIZER_PRINCIPAL_DOMAIN: "open-metadata.org"
+    ports:
+      - "8585:8585"
+      - "8586:8586"
+    depends_on:
+      openmetadata-mysql:
+        condition: service_healthy
+      openmetadata-elasticsearch:
+        condition: service_healthy
+      openmetadata-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8585/api/v1/system/version"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    restart: always
+
+  # =============================================================================
+  # KAFKA STACK (Event Streaming)
+  # =============================================================================
   zookeeper:
-    image: confluentinc/cp-zookeeper:5.4.0
-    hostname: zookeeper
+    image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
     ports:
       - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
 
   broker:
-    image: confluentinc/cp-server:5.4.0
-    hostname: broker
+    image: confluentinc/cp-server:7.5.0
     container_name: broker
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
+      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
@@ -172,205 +267,176 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
       CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:29092
-      CONFLUENT_METRICS_REPORTER_ZOOKEEPER_CONNECT: zookeeper:2181
       CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
       CONFLUENT_METRICS_ENABLE: "true"
-      CONFLUENT_SUPPORT_CUSTOMER_ID: "anonymous"
+      CONFLUENT_SUPPORT_CUSTOMER_ID: anonymous
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: always
 
   kafka-tools:
-    image: confluentinc/cp-kafka:5.4.0
-    hostname: kafka-tools
-    container_name: kafka-tools
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka_tools
     command: ["tail", "-f", "/dev/null"]
-    network_mode: "host"
+    network_mode: host
     volumes:
       - ./data/pet_sensor:/data/pet_sensor
 
   schema-registry:
-    image: confluentinc/cp-schema-registry:5.4.0
-    hostname: schema-registry
-    container_name: schema-registry
+    image: confluentinc/cp-schema-registry:7.5.0
+    container_name: schema_registry
     depends_on:
-      - zookeeper
-      - broker
+      broker:
+        condition: service_healthy
     ports:
       - "8081:8081"
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: "zookeeper:2181"
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: broker:29092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8081/subjects"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
 
   control-center:
-    image: confluentinc/cp-enterprise-control-center:5.4.0
-    hostname: control-center
-    container_name: control-center
+    image: confluentinc/cp-enterprise-control-center:7.5.0
+    container_name: control_center
     depends_on:
-      - zookeeper
-      - broker
-      - schema-registry
+      broker:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
     ports:
       - "9021:9021"
     environment:
-      CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker:29092'
-      CONTROL_CENTER_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      CONTROL_CENTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: broker:29092
+      CONTROL_CENTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       CONTROL_CENTER_REPLICATION_FACTOR: 1
       CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
       CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
       CONFLUENT_METRICS_TOPIC_REPLICATION: 1
       PORT: 9021
+    restart: always
 
-  spark:
-    image: docker.io/bitnami/spark:3
+  # =============================================================================
+  # SPARK STACK (Data Processing)
+  # =============================================================================
+  spark-master:
+    image: apache/spark:3.5.0
+    container_name: spark_master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     environment:
-      - SPARK_MODE=master
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
+      - SPARK_NO_DAEMONIZE=true
     ports:
-      - '8082:8080'
-
-  spark-worker-1:
-    image: docker.io/bitnami/spark:3
-    environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark:7077
-      - SPARK_WORKER_MEMORY=1G
-      - SPARK_WORKER_CORES=1
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
-
-  atlas:
-    image: sburn/apache-atlas
-    ports:
-      - '21000:21000'
-    command: [ "/opt/apache-atlas-2.1.0/bin/atlas_start.py"]
-
-  neo4j:
-    image: neo4j:3.5.26
-    container_name: neo4j_amundsen
-    environment:
-      - NEO4J_AUTH=neo4j/test
-    ulimits:
-      nofile:
-        soft: 40000
-        hard: 40000
-    ports:
-      - 7474:7474
-      - 7687:7687
+      - "8082:8080"
+      - "7077:7077"
     volumes:
-      - ./conf/neo4j:/var/lib/neo4j/conf
-      - ./.local/neo4j/data:/data
+      - delta-lake-data:/data/delta
+      - ./spark/jars:/opt/spark/user-jars
+      - ./spark/jobs:/opt/spark/jobs
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: always
 
-  elasticsearch:
-    image: elasticsearch:6.7.0
-    container_name: es_amundsen
-    ports:
-      - 9200:9200
-    ulimits:
-      nofile:
-        soft: 65536
-        hard: 65536
-
-  amundsensearch:
-    build:
-      context: .
-      dockerfile: Dockerfile.search.public
-    container_name: amundsensearch
-    ports:
-      - 5001:5001
-    depends_on:
-      - elasticsearch
+  spark-worker:
+    image: apache/spark:3.5.0
+    container_name: spark_worker
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     environment:
-      - PROXY_ENDPOINT=es_amundsen
-
-  amundsenmetadata:
-    build:
-      context: .
-      dockerfile: Dockerfile.metadata.public
-    container_name: amundsenmetadata
+      - SPARK_NO_DAEMONIZE=true
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=2
+    volumes:
+      - delta-lake-data:/data/delta
+      - ./spark/jars:/opt/spark/user-jars
+      - ./spark/jobs:/opt/spark/jobs
     depends_on:
-      - neo4j
-    ports:
-      - 5002:5002
-    environment:
-      - PROXY_HOST=bolt://neo4j_amundsen
+      spark-master:
+        condition: service_healthy
+    restart: always
 
-  amundsenfrontend:
-    build:
-      args:
-        SEARCHSERVICE_BASE: http://amundsensearch:5001
-        METADATASERVICE_BASE: http://amundsenmetadata:5002
-      context: .
-      dockerfile: Dockerfile.frontend.local
-    container_name: amundsenfrontend
-    depends_on:
-      - amundsenmetadata
-      - amundsensearch
-    ports:
-      - 5000:5000
-    environment:
-      - SEARCHSERVICE_BASE=http://amundsensearch:5001
-      - METADATASERVICE_BASE=http://amundsenmetadata:5002
-      - FRONTEND_SVC_CONFIG_MODULE_CLASS=amundsen_application.config.TestConfig
-
+  # =============================================================================
+  # MONITORING STACK (Prometheus + Grafana)
+  # =============================================================================
   prometheus:
     image: prom/prometheus:latest
-    container_name: monitoring_prometheus
+    container_name: prometheus
     restart: unless-stopped
     volumes:
       - ./data/prometheus/config:/etc/prometheus/
-      - ./data/prometheus/data:/prometheus
+      - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
-    expose:
-      - 9090
+      - '--storage.tsdb.path=/prometheus'
     ports:
-      - 9090:9090
-    links:
-      - cadvisor:cadvisor
-      - node-exporter:node-exporter
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   node-exporter:
     image: prom/node-exporter:latest
-    container_name: monitoring_node_exporter
+    container_name: node_exporter
     restart: unless-stopped
-    expose:
-      - 9100
+    ports:
+      - "9100:9100"
 
   cadvisor:
-    image: google/cadvisor:latest
-    container_name: monitoring_cadvisor
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
     restart: unless-stopped
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:rw
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
-    expose:
-      - 8080
+    ports:
+      - "8083:8080"
 
   grafana:
     image: grafana/grafana:latest
-    container_name: monitoring_grafana
+    container_name: grafana
     restart: unless-stopped
     ports:
-      - 3000:3000
-    links:
-      - prometheus:prometheus
+      - "3000:3000"
     volumes:
-      - ./data/grafana:/var/lib/grafana
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=MYPASSWORT
-      - GF_USERS_ALLOW_SIGN_UP=true
-      - GF_SERVER_DOMAIN=myrul.com
-      - GF_SMTP_ENABLED=true
-      - GF_SMTP_HOST=smtp.gmail.com:587
-      - GF_SMTP_USER=myadrress@gmail.com
-      - GF_SMTP_PASSWORD=mypassword
-      - GF_SMTP_FROM_ADDRESS=myaddress@gmail.com
+      # No auth for development
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/pet-activity.json
+    depends_on:
+      - prometheus
+      - output-postgres
 
 volumes:
-  postgres-db-volume:
+  pet-postgres-data:
+  output-postgres-data:
+  delta-lake-data:
+  prefect-postgres-data:
+  prefect-redis-data:
+  openmetadata-mysql-data:
+  openmetadata-es-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  default:
+    name: pet-project-network

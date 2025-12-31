@@ -1,0 +1,24 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: false
+    editable: true
+
+  - name: Pet Activity DB
+    type: postgres
+    url: output-postgres:5432
+    database: outputdb
+    user: outputdb
+    secureJsonData:
+      password: outputdb
+    jsonData:
+      sslmode: disable
+      maxOpenConns: 10
+      maxIdleConns: 10
+      connMaxLifetime: 14400
+    isDefault: true
+    editable: true

@@ -127,3 +127,23 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# uv
+.uv/
+
+# Docker volumes
+docker-volume/
+.local/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Data files (large)
+data/grafana/
+data/prometheus/data/
+
+# Logs
+airflow/logs/
